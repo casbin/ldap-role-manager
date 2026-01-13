@@ -19,7 +19,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/casbin/casbin/v3/rbac"
@@ -325,53 +324,10 @@ func (rm *RoleManager) GetUsers(name string, domain ...string) ([]string, error)
 		return []string{}, nil
 	}
 
-	// Build a filter to search for all members in a single query
-	// Use DN matching which is more universally supported than distinguishedName attribute
-	var filterParts []string
+	// Query each member DN individually for maximum LDAP compatibility
+	// This approach works reliably across all LDAP server implementations
+	var users []string
 	for _, memberDN := range members {
-		// Match by DN (entryDN or other DN-based attributes)
-		filterParts = append(filterParts, fmt.Sprintf("(entryDN=%s)", ldap.EscapeFilter(memberDN)))
-	}
-	
-	// Create OR filter for all member DNs
-	var memberFilter string
-	if len(filterParts) == 1 {
-		memberFilter = filterParts[0]
-	} else {
-		memberFilter = fmt.Sprintf("(|%s)", strings.Join(filterParts, ""))
-	}
-	
-	// Search for all users matching the member DNs
-	allUsersFilter := fmt.Sprintf("(&(objectClass=person)%s)", memberFilter)
-	usersSearchRequest := ldap.NewSearchRequest(
-		rm.baseDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		allUsersFilter,
-		[]string{rm.userNameAttribute, "dn"},
-		nil,
-	)
-
-	usr, err := rm.conn.Search(usersSearchRequest)
-	if err != nil {
-		// Fallback to individual queries if batch search fails
-		return rm.getUsersIndividually(members)
-	}
-
-	var users []string
-	for _, entry := range usr.Entries {
-		userName := entry.GetAttributeValue(rm.userNameAttribute)
-		if userName != "" {
-			users = append(users, userName)
-		}
-	}
-
-	return users, nil
-}
-
-// getUsersIndividually is a fallback method that queries users one by one
-func (rm *RoleManager) getUsersIndividually(memberDNs []string) ([]string, error) {
-	var users []string
-	for _, memberDN := range memberDNs {
 		userSearchRequest := ldap.NewSearchRequest(
 			memberDN,
 			ldap.ScopeBaseObject, ldap.NeverDerefAliases, 0, 0, false,
@@ -388,6 +344,7 @@ func (rm *RoleManager) getUsersIndividually(memberDNs []string) ([]string, error
 			}
 		}
 	}
+
 	return users, nil
 }
 
