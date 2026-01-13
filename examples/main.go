@@ -59,7 +59,7 @@ func main() {
 	// Check permissions
 	// In this example, we assume alice is in the admin group in LDAP
 	// and bob is in the user group in LDAP
-	
+
 	// Alice (admin) can read and write data1
 	if res, _ := e.Enforce("alice", "data1", "read"); res {
 		fmt.Println("✓ alice can read data1")

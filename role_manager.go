@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/casbin/casbin/v2/log"
 	"github.com/casbin/casbin/v2/rbac"
 	"github.com/go-ldap/ldap/v3"
 )
@@ -41,6 +42,7 @@ type RoleManager struct {
 	userFilter        string
 	groupFilter       string
 	roleAttr          string
+	logger            log.Logger
 	mutex             sync.RWMutex
 }
 
@@ -387,4 +389,9 @@ func (rm *RoleManager) DeleteDomain(domain string) error {
 	defer rm.mutex.Unlock()
 	delete(rm.allDomains, domain)
 	return nil
+}
+
+// SetLogger sets role manager's logger.
+func (rm *RoleManager) SetLogger(logger log.Logger) {
+	rm.logger = logger
 }

@@ -432,6 +432,22 @@ func TestMatch(t *testing.T) {
 	}
 }
 
+// TestSetLogger tests the SetLogger method.
+func TestSetLogger(t *testing.T) {
+	rm := &RoleManager{
+		allDomains:        make(map[string]struct{}),
+		maxHierarchyLevel: 10,
+	}
+
+	// Test setting a nil logger (should not panic)
+	rm.SetLogger(nil)
+
+	// Verify logger was set
+	if rm.logger != nil {
+		t.Error("Expected logger to be nil")
+	}
+}
+
 // TestNoConnectionError tests error handling when LDAP connection is nil.
 func TestNoConnectionError(t *testing.T) {
 	rm := &RoleManager{
