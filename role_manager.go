@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/casbin/casbin/v3/rbac"
@@ -325,9 +326,11 @@ func (rm *RoleManager) GetUsers(name string, domain ...string) ([]string, error)
 	}
 
 	// Build a filter to search for all members in a single query
+	// Use DN matching which is more universally supported than distinguishedName attribute
 	var filterParts []string
 	for _, memberDN := range members {
-		filterParts = append(filterParts, fmt.Sprintf("(distinguishedName=%s)", ldap.EscapeFilter(memberDN)))
+		// Match by DN (entryDN or other DN-based attributes)
+		filterParts = append(filterParts, fmt.Sprintf("(entryDN=%s)", ldap.EscapeFilter(memberDN)))
 	}
 	
 	// Create OR filter for all member DNs
@@ -335,7 +338,7 @@ func (rm *RoleManager) GetUsers(name string, domain ...string) ([]string, error)
 	if len(filterParts) == 1 {
 		memberFilter = filterParts[0]
 	} else {
-		memberFilter = fmt.Sprintf("(|%s)", joinStrings(filterParts, ""))
+		memberFilter = fmt.Sprintf("(|%s)", strings.Join(filterParts, ""))
 	}
 	
 	// Search for all users matching the member DNs
@@ -386,18 +389,6 @@ func (rm *RoleManager) getUsersIndividually(memberDNs []string) ([]string, error
 		}
 	}
 	return users, nil
-}
-
-// joinStrings concatenates strings without a separator
-func joinStrings(strs []string, sep string) string {
-	result := ""
-	for _, s := range strs {
-		result += s + sep
-	}
-	if sep != "" && len(result) > 0 {
-		result = result[:len(result)-len(sep)]
-	}
-	return result
 }
 
 // GetImplicitRoles gets the implicit roles that a user inherits.
