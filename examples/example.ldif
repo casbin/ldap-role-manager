@@ -1,0 +1,48 @@
+# Example LDIF file for setting up LDAP structure
+# This file can be used to populate an LDAP server for testing
+
+# Create organizational units
+dn: ou=users,dc=example,dc=com
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=example,dc=com
+objectClass: organizationalUnit
+ou: groups
+
+# Create users
+dn: uid=alice,ou=users,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: top
+cn: Alice Smith
+sn: Smith
+uid: alice
+uidNumber: 1001
+gidNumber: 1001
+homeDirectory: /home/alice
+userPassword: password
+
+dn: uid=bob,ou=users,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: top
+cn: Bob Jones
+sn: Jones
+uid: bob
+uidNumber: 1002
+gidNumber: 1002
+homeDirectory: /home/bob
+userPassword: password
+
+# Create groups
+dn: cn=admin,ou=groups,dc=example,dc=com
+objectClass: groupOfNames
+cn: admin
+member: uid=alice,ou=users,dc=example,dc=com
+
+dn: cn=user,ou=groups,dc=example,dc=com
+objectClass: groupOfNames
+cn: user
+member: uid=alice,ou=users,dc=example,dc=com
+member: uid=bob,ou=users,dc=example,dc=com
