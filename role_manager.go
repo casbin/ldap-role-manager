@@ -15,6 +15,7 @@
 package ldaprolemanager
 
 import (
+	"container/list"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -319,10 +320,55 @@ func (rm *RoleManager) GetUsers(name string, domain ...string) ([]string, error)
 
 	// Get members from the group
 	members := sr.Entries[0].GetAttributeValues(rm.memberAttribute)
-	var users []string
+	if len(members) == 0 {
+		return []string{}, nil
+	}
 
-	// For each member DN, get the username
+	// Build a filter to search for all members in a single query
+	var filterParts []string
 	for _, memberDN := range members {
+		filterParts = append(filterParts, fmt.Sprintf("(distinguishedName=%s)", ldap.EscapeFilter(memberDN)))
+	}
+	
+	// Create OR filter for all member DNs
+	var memberFilter string
+	if len(filterParts) == 1 {
+		memberFilter = filterParts[0]
+	} else {
+		memberFilter = fmt.Sprintf("(|%s)", joinStrings(filterParts, ""))
+	}
+	
+	// Search for all users matching the member DNs
+	allUsersFilter := fmt.Sprintf("(&(objectClass=person)%s)", memberFilter)
+	usersSearchRequest := ldap.NewSearchRequest(
+		rm.baseDN,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		allUsersFilter,
+		[]string{rm.userNameAttribute, "dn"},
+		nil,
+	)
+
+	usr, err := rm.conn.Search(usersSearchRequest)
+	if err != nil {
+		// Fallback to individual queries if batch search fails
+		return rm.getUsersIndividually(members)
+	}
+
+	var users []string
+	for _, entry := range usr.Entries {
+		userName := entry.GetAttributeValue(rm.userNameAttribute)
+		if userName != "" {
+			users = append(users, userName)
+		}
+	}
+
+	return users, nil
+}
+
+// getUsersIndividually is a fallback method that queries users one by one
+func (rm *RoleManager) getUsersIndividually(memberDNs []string) ([]string, error) {
+	var users []string
+	for _, memberDN := range memberDNs {
 		userSearchRequest := ldap.NewSearchRequest(
 			memberDN,
 			ldap.ScopeBaseObject, ldap.NeverDerefAliases, 0, 0, false,
@@ -339,8 +385,19 @@ func (rm *RoleManager) GetUsers(name string, domain ...string) ([]string, error)
 			}
 		}
 	}
-
 	return users, nil
+}
+
+// joinStrings concatenates strings without a separator
+func joinStrings(strs []string, sep string) string {
+	result := ""
+	for _, s := range strs {
+		result += s + sep
+	}
+	if sep != "" && len(result) > 0 {
+		result = result[:len(result)-len(sep)]
+	}
+	return result
 }
 
 // GetImplicitRoles gets the implicit roles that a user inherits.
@@ -353,13 +410,15 @@ func (rm *RoleManager) GetImplicitRoles(name string, domain ...string) ([]string
 	}
 
 	allRoles := make(map[string]bool)
-	queue := []string{name}
+	queue := list.New()
+	queue.PushBack(name)
 	visited := make(map[string]bool)
 	depth := 0
 
-	for len(queue) > 0 && depth < rm.maxDepth {
-		current := queue[0]
-		queue = queue[1:]
+	for queue.Len() > 0 && depth < rm.maxDepth {
+		element := queue.Front()
+		current := element.Value.(string)
+		queue.Remove(element)
 
 		if visited[current] {
 			continue
@@ -374,7 +433,7 @@ func (rm *RoleManager) GetImplicitRoles(name string, domain ...string) ([]string
 		for _, role := range roles {
 			if !allRoles[role] {
 				allRoles[role] = true
-				queue = append(queue, role)
+				queue.PushBack(role)
 			}
 		}
 		depth++
@@ -397,6 +456,8 @@ func (rm *RoleManager) GetImplicitUsers(name string, domain ...string) ([]string
 
 // GetDomains gets domains that a user has.
 func (rm *RoleManager) GetDomains(name string) ([]string, error) {
+	rm.mu.RLock()
+	defer rm.mu.RUnlock()
 	return rm.allDomains, nil
 }
 
