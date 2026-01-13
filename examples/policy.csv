@@ -1,7 +1,0 @@
-p, admin-group, data1, read
-p, admin-group, data1, write
-p, admin-group, data2, read
-p, admin-group, data2, write
-p, user-group, data1, read
-p, support-group, data1, read
-p, support-group, data2, read

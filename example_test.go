@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build example
+
 package main
 
 import (
@@ -42,7 +44,9 @@ func main() {
 	}
 	defer rm.Close()
 
-	// Create a Casbin enforcer
+	// Create a Casbin enforcer with model and policy files
+	// Model file (model.conf) should contain RBAC model definition
+	// Policy file (policy.csv) should contain authorization policies
 	e, err := casbin.NewEnforcer("model.conf", "policy.csv")
 	if err != nil {
 		log.Fatalf("Failed to create enforcer: %v", err)
