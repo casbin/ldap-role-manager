@@ -297,8 +297,9 @@ func (rm *RoleManager) GetUsers(name string, domain ...string) ([]string, error)
 		return nil, errors.New("LDAP connection not established")
 	}
 
-	// Search for the group
-	groupFilter := fmt.Sprintf("(&%s(%s=%s))", rm.groupFilter, rm.groupNameAttribute, ldap.EscapeFilter(name))
+	// Search for the group by name
+	// Build a filter to find a group with the specified name
+	groupFilter := fmt.Sprintf("(&(objectClass=groupOfNames)(%s=%s))", rm.groupNameAttribute, ldap.EscapeFilter(name))
 	searchRequest := ldap.NewSearchRequest(
 		rm.baseDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
