@@ -1,6 +1,6 @@
 module github.com/casbin/ldap-role-manager
 
-go 1.23
+go 1.24.0
 
 require (
 	github.com/casbin/casbin/v2 v2.100.0
@@ -13,5 +13,5 @@ require (
 	github.com/casbin/govaluate v1.2.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 )
